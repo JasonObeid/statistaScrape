@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-#todo 1181 manual annotations left
+#todo 1152 manual annotations left
 
 fileList = os.listdir('2Columns')
 count = 0
