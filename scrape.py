@@ -7,6 +7,15 @@ import os
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+sr = []
+txt_dir = "captions/"
+base_dir = "2Columns/"
+other_dir = "multiColumn/"
+metaPath = base_dir + "metadata.csv"
+otherMetaPath = other_dir + "otherMetadata.csv"
+meta_list = []
+other_meta_list = []
+
 class MySpider(scrapy.Spider):
     name = "ScraperWithLimit"
     start_urls = []
@@ -32,31 +41,7 @@ class MySpider(scrapy.Spider):
                 yield response.follow(link, self.parse)
 
 
-sr = []
-process = CrawlerProcess()
-process.crawl(MySpider)
-process.start()
-process.stop()
-print(sr)
-print(len(sr))
-
-Path = "scraped.csv"
-frame = pd.DataFrame(sr)
-frame.to_csv(index=False, path_or_buf=Path)
-
-
-txt_dir = "captions/"
-base_dir = "2Columns/"
-other_dir = "multiColumn/"
-metaPath = base_dir + "metadata.csv"
-otherMetaPath = other_dir + "otherMetadata.csv"
-meta_list = []
-other_meta_list = []
-ids = 0
-multiIds = 0
-
-
-def processData(captionText, dFrame):
+def processData(captionText, dFrame, link, ids):
     # save dataframe only if it has 2 columns
     dataPath = base_dir + str(ids) + ".csv"
     xAxis = dFrame.columns[0]
@@ -67,14 +52,14 @@ def processData(captionText, dFrame):
         chartType = 'bar'
     # list of metadata contains item id, path of data.csv, and the caption
     meta_list.append({'id': ids, 'dataPath': dataPath, 'caption': captionText, 'chartType': chartType, 'xAxis': xAxis,
-                      'yAxis': yAxis, 'URL': link.url})
+                      'yAxis': yAxis, 'title': link.text, 'URL': link.url})
     dFrame.to_csv(index=False, path_or_buf=dataPath)
     txtPath = txt_dir + str(ids) + ".txt"
     with open(txtPath, 'w') as f:
       f.write(captionText)
 
 
-def processMultiColumn(captionText, dFrame):
+def processMultiColumn(captionText, dFrame, link, multiIds):
     dataPath = other_dir + str(multiIds) + ".csv"
     xAxis = dFrame.columns
     columns = []
@@ -88,8 +73,26 @@ def processMultiColumn(captionText, dFrame):
       f.write(captionText)
 
 
-for link in sr:
-    try:
+def crawl():
+    sr = []
+    process = CrawlerProcess()
+    process.crawl(MySpider)
+    process.start()
+    process.stop()
+    print(sr)
+    print(len(sr))
+
+    Path = "scraped.csv"
+    frame = pd.DataFrame(sr)
+    frame.to_csv(index=False, path_or_buf=Path)
+
+    return sr
+
+
+def scrape(sr):
+    ids = 0
+    multiIds = 0
+    for link in sr:
         # open link
         html = urlopen(link.url).read()
         # parse as soup object
@@ -115,18 +118,21 @@ for link in sr:
                         caption += cleanText
                     #check how many columns table has
                     if (dfs.shape[1] == 2):
-                        processData(caption, dfs)
+                        processData(caption, dfs, link, ids)
                         ids += 1
                     else:
-                        processMultiColumn(caption, dfs)
+                        processMultiColumn(caption, dfs, link, multiIds)
                         multiIds += 1
 
+    metadata = pd.DataFrame(meta_list)
+    metadata.to_csv(index=False, path_or_buf=metaPath)
 
-    except Exception as ex:
-        print(ex)
+    otherMeta = pd.DataFrame(other_meta_list)
+    otherMeta.to_csv(index=False, path_or_buf=otherMetaPath)
 
-metadata = pd.DataFrame(meta_list)
-metadata.to_csv(index=False, path_or_buf=metaPath)
+try:
+    urls = crawl()
+    scrape(urls)
 
-otherMeta = pd.DataFrame(other_meta_list)
-otherMeta.to_csv(index=False, path_or_buf=otherMetaPath)
+except Exception as ex:
+    print(ex)
