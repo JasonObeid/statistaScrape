@@ -1,6 +1,5 @@
 import os
 import re
-from scrapy import link
 from shutil import copyfile
 
 import pandas as pd
@@ -21,16 +20,15 @@ for row in scraped.iterrows():
         cleanText = re.sub("\s+", ' ', cleanText)
         urlList[cleanUrl] = cleanText
 
-print(urlList["https://www.statista.com/statistics/248622/rates-of-leading-causes-of-death-in-the-us/"])
-print(type(urlList))
-
-fileList = os.listdir('temp/data')
-metadata = pd.read_csv('metadata.csv')
+fileList = os.listdir('multiColumn/data')
+fileList.sort()
+metadata = pd.read_csv('multiColumn/otherMetadata.csv')
 count = 0
+
 for filePath in fileList:
     rowIndex = int(filePath[0:len(filePath) - 4])
     row = metadata.iloc[rowIndex]
-    title = urlList[row[6]]
+    title = urlList[row.URL]
     textPath = filePath[0:len(filePath)-3] + 'txt'
-    with open(f'temp/titles/{textPath}', mode='wt', encoding='utf8') as myfile:
+    with open(f'multiColumn/titles/{textPath}', mode='wt', encoding='utf8') as myfile:
             myfile.write(title)
